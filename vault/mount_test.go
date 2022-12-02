@@ -11,6 +11,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/audit"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/versions"
@@ -121,6 +122,9 @@ func TestCore_DefaultMountTable(t *testing.T) {
 		BuiltinRegistry: NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
 	}
 	c2, err := NewCore(conf)
 	if err != nil {
@@ -166,6 +170,9 @@ func TestCore_Mount(t *testing.T) {
 		BuiltinRegistry: NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
 	}
 	c2, err := NewCore(conf)
 	if err != nil {
@@ -238,6 +245,9 @@ func TestCore_Mount_kv_generic(t *testing.T) {
 		BuiltinRegistry: NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
 	}
 	c2, err := NewCore(conf)
 	if err != nil {
@@ -452,6 +462,9 @@ func TestCore_Unmount(t *testing.T) {
 		BuiltinRegistry: NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
 	}
 	c2, err := NewCore(conf)
 	if err != nil {
