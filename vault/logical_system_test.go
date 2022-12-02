@@ -3140,7 +3140,7 @@ func TestSystemBackend_PluginCatalog_ListPlugins_SucceedsWithAuditLogEnabled(t *
 	}
 
 	// Enable audit logging.
-	req := logical.TestRequest(t, logical.UpdateOperation, "audit/file")
+	req := logical.TestRequest(t, logical.UpdateOperation, "audit/file-test")
 	req.Data = map[string]any{
 		"type": "file",
 		"options": map[string]any{
