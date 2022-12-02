@@ -155,6 +155,9 @@ func TestCoreWithCustomResponseHeaderAndUI(t testing.T, CustomResponseHeaders ma
 		EnableUI:        enableUI,
 		EnableRaw:       true,
 		BuiltinRegistry: NewMockBuiltinRegistry(),
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
 	}
 	core := TestCoreWithSealAndUI(t, conf)
 	return testCoreUnsealed(t, core)
@@ -165,6 +168,9 @@ func TestCoreUI(t testing.T, enableUI bool) *Core {
 		EnableUI:        enableUI,
 		EnableRaw:       true,
 		BuiltinRegistry: NewMockBuiltinRegistry(),
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
 	}
 	return TestCoreWithSealAndUI(t, conf)
 }
@@ -243,7 +249,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 
 func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Logger) *CoreConfig {
 	t.Helper()
-	noopAudits := map[string]audit.Factory{
+	auditBackends := map[string]audit.Factory{
 		"noop": func(_ context.Context, config *audit.BackendConfig) (audit.Backend, error) {
 			view := &logical.InmemStorage{}
 			view.Put(context.Background(), &logical.StorageEntry{
@@ -264,6 +270,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 			}
 			return n, nil
 		},
+		"file": auditFile.Factory,
 	}
 
 	noopBackends := make(map[string]logical.Factory)
@@ -297,7 +304,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 
 	conf := &CoreConfig{
 		Physical:           physicalBackend,
-		AuditBackends:      noopAudits,
+		AuditBackends:      auditBackends,
 		LogicalBackends:    logicalBackends,
 		CredentialBackends: credentialBackends,
 		DisableMlock:       true,
@@ -423,7 +430,38 @@ func TestInitUnsealCore(t testing.T, core *Core) (string, [][]byte) {
 		t.Fatal("should not be sealed")
 	}
 
+	testCoreEnableAuditLogging(t, core, token)
 	return token, keys
+}
+
+func testCoreEnableAuditLogging(t testing.T, core *Core, token string) {
+	f, err := os.CreateTemp("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		err := os.Remove(f.Name())
+		if err != nil {
+			t.Errorf("failed to clean up audit log file: %s", err)
+		}
+	})
+
+	// Enable audit logging.
+	req := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		ClientToken: token,
+		Path:        "sys/audit/file",
+		Data: map[string]interface{}{
+			"type": "file",
+			"options": map[string]any{
+				"file_path": f.Name(),
+			},
+		},
+	}
+	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("resp: %#v, err: %v", resp, err)
+	}
 }
 
 func testCoreAddSecretMount(t testing.T, core *Core, token string) {
@@ -488,6 +526,7 @@ func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]
 		}
 	})
 
+	testCoreEnableAuditLogging(t, core, token)
 	return core, keys, token
 }
 
