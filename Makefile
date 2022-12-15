@@ -212,6 +212,7 @@ fmtcheck:
 #@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 fmt:
+	git diff
 	gofumpt -version
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
 
