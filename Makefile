@@ -214,7 +214,7 @@ fmtcheck:
 fmt:
 	git diff
 	gofumpt -version
-	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
+	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w -l
 
 semgrep:
 	semgrep --include '*.go' --exclude 'vendor' -a -f tools/semgrep .
