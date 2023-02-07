@@ -108,6 +108,7 @@ type Cache struct {
 	EnforceConsistency  string          `hcl:"enforce_consistency"`
 	WhenInconsistent    string          `hcl:"when_inconsistent"`
 	Persist             *Persist        `hcl:"persist"`
+	Static              *Static         `hcl:"static"`
 	InProcDialer        transportDialer `hcl:"-"`
 }
 
@@ -118,6 +119,12 @@ type Persist struct {
 	KeepAfterImport         bool   `hcl:"keep_after_import"`
 	ExitOnErr               bool   `hcl:"exit_on_err"`
 	ServiceAccountTokenFile string `hcl:"service_account_token_file"`
+}
+
+// Static contains configuration relevant to caching non-leased secrets
+type Static struct {
+	TTL                string `hcl:"ttl"`                  // TTL for each cached static secret.
+	SubscribeToUpdates bool   `hcl:"subscribe_to_updates"` // Use events system to evict cache items early when they get updated.
 }
 
 // AutoAuth is the configured authentication method and sinks
@@ -717,6 +724,10 @@ func parseCache(result *Config, list *ast.ObjectList) error {
 		return fmt.Errorf("error parsing persist: %w", err)
 	}
 
+	if err := parseStatic(result, subList); err != nil {
+		return fmt.Errorf("error parsing static: %w", err)
+	}
+
 	return nil
 }
 
@@ -750,6 +761,36 @@ func parsePersist(result *Config, list *ast.ObjectList) error {
 	}
 
 	result.Cache.Persist = &p
+
+	return nil
+}
+
+func parseStatic(result *Config, list *ast.ObjectList) error {
+	name := "static"
+
+	staticList := list.Filter(name)
+	if len(staticList.Items) == 0 {
+		return nil
+	}
+
+	if len(staticList.Items) > 1 {
+		return fmt.Errorf("only one %q block is allowed", name)
+	}
+
+	item := staticList.Items[0]
+
+	var s Static
+	err := hcl.DecodeObject(&s, item.Val)
+	if err != nil {
+		return err
+	}
+
+	// Default TTL to 5m if cache.static block is defined.
+	if s.TTL == "" {
+		s.TTL = "5m"
+	}
+
+	result.Cache.Static = &s
 
 	return nil
 }

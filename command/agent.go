@@ -508,23 +508,41 @@ func (c *AgentCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Error creating API proxy: %v", err))
 		return 1
 	}
+	baseProxier := apiProxy
 
 	// Parse agent cache configurations
 	if config.Cache != nil {
 		cacheLogger := c.logger.Named("cache")
+
+		if config.Cache.Static != nil {
+			staticCache, err := cache.NewStaticCache(&cache.StaticCacheConfig{
+				Client:  proxyClient,
+				Proxier: baseProxier,
+				Logger:  cacheLogger.Named("staticcache"),
+
+				TTL:                config.Cache.Static.TTL,
+				SubscribeToUpdates: config.Cache.Static.SubscribeToUpdates,
+			})
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error creating static cache: %v", err))
+				return 1
+			}
+			baseProxier = staticCache
+		}
 
 		// Create the lease cache proxier and set its underlying proxier to
 		// the API proxier.
 		leaseCache, err = cache.NewLeaseCache(&cache.LeaseCacheConfig{
 			Client:      proxyClient,
 			BaseContext: ctx,
-			Proxier:     apiProxy,
+			Proxier:     baseProxier,
 			Logger:      cacheLogger.Named("leasecache"),
 		})
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating lease cache: %v", err))
 			return 1
 		}
+		baseProxier = leaseCache
 
 		// Configure persistent storage and add to LeaseCache
 		if config.Cache.Persist != nil {
@@ -729,12 +747,7 @@ func (c *AgentCommand) Run(args []string) int {
 			proxyVaultToken = !config.APIProxy.ForceAutoAuthToken
 		}
 
-		var muxHandler http.Handler
-		if leaseCache != nil {
-			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, leaseCache, inmemSink, proxyVaultToken)
-		} else {
-			muxHandler = cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, inmemSink, proxyVaultToken)
-		}
+		muxHandler := cache.ProxyHandler(ctx, apiProxyLogger, baseProxier, inmemSink, proxyVaultToken)
 
 		// Parse 'require_request_header' listener config option, and wrap
 		// the request handler if necessary
