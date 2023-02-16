@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/eventbus/buffer"
 	"github.com/ryanuber/go-glob"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -42,6 +43,7 @@ type EventBus struct {
 	started         atomic.Bool
 	formatterNodeID eventlogger.NodeID
 	timeout         time.Duration
+	replayBuffer    buffer.ReplayBuffer
 }
 
 type pluginEventBus struct {
@@ -161,15 +163,52 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 		logger = hclog.Default().Named("events")
 	}
 
+	// Do nothing formatter node.
+	doNothingFormatterID, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+	err = broker.RegisterNode(eventlogger.NodeID(doNothingFormatterID), &doNothingFormatter{})
+	if err != nil {
+		return nil, err
+	}
+
+	// Replay buffer node.
+	replayBufferID, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+	replayBuffer := buffer.NewReplayBuffer(32)
+	err = broker.RegisterNode(eventlogger.NodeID(replayBufferID), replayBuffer)
+	if err != nil {
+		return nil, err
+	}
+
+	// Replay buffer pipeline.
+	pipelineID, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+	pipeline := eventlogger.Pipeline{
+		PipelineID: eventlogger.PipelineID(pipelineID),
+		EventType:  eventTypeAll,
+		NodeIDs:    []eventlogger.NodeID{eventlogger.NodeID(doNothingFormatterID), eventlogger.NodeID(replayBufferID)},
+	}
+	err = broker.RegisterPipeline(pipeline)
+	if err != nil {
+		return nil, err
+	}
+
 	return &EventBus{
 		logger:          logger,
 		broker:          broker,
 		formatterNodeID: formatterNodeID,
 		timeout:         defaultTimeout,
+		replayBuffer:    replayBuffer,
 	}, nil
 }
 
-func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pattern string) (<-chan *logical.EventReceived, context.CancelFunc, error) {
+func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pattern string, replay bool) (<-chan *logical.EventReceived, context.CancelFunc, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -217,6 +256,9 @@ func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pat
 	// add info needed to cancel the subscription
 	asyncNode.pipelineID = eventlogger.PipelineID(pipelineID)
 	asyncNode.cancelFunc = cancel
+	if replay {
+		go bus.replayBuffer.Replay(ctx, []eventlogger.Node{filterNode, cloudEventsFormatterFilter, asyncNode})
+	}
 	return asyncNode.ch, asyncNode.Close, nil
 }
 
@@ -299,4 +341,18 @@ func (node *asyncChanNode) Type() eventlogger.NodeType {
 
 func addSubscriptions(delta int64) {
 	metrics.SetGauge([]string{"events", "subscriptions"}, float32(subscriptions.Add(delta)))
+}
+
+type doNothingFormatter struct{}
+
+func (node *doNothingFormatter) Process(_ context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+	return e, nil
+}
+
+func (node *doNothingFormatter) Reopen() error {
+	return nil
+}
+
+func (node *doNothingFormatter) Type() eventlogger.NodeType {
+	return eventlogger.NodeTypeFormatter
 }

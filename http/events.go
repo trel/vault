@@ -34,7 +34,7 @@ type eventSubscribeArgs struct {
 func handleEventsSubscribeWebsocket(args eventSubscribeArgs) (websocket.StatusCode, string, error) {
 	ctx := args.ctx
 	logger := args.logger
-	ch, cancel, err := args.events.Subscribe(ctx, args.ns, args.pattern)
+	ch, cancel, err := args.events.Subscribe(ctx, args.ns, args.pattern, false)
 	if err != nil {
 		logger.Info("Error subscribing", "error", err)
 		return websocket.StatusUnsupportedData, "Error subscribing", nil

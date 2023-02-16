@@ -39,7 +39,7 @@ func TestBusBasics(t *testing.T) {
 		t.Errorf("Expected no error sending: %v", err)
 	}
 
-	ch, cancel, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType))
+	ch, cancel, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType), false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestNamespaceFiltering(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ch, cancel, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType))
+	ch, cancel, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType), false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,13 +138,13 @@ func TestBus2Subscriptions(t *testing.T) {
 	eventType2 := logical.EventType("someType2")
 	bus.Start()
 
-	ch1, cancel1, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType1))
+	ch1, cancel1, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType1), false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cancel1()
 
-	ch2, cancel2, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType2))
+	ch2, cancel2, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType2), false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -223,7 +223,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 			received := atomic.Int32{}
 
 			for i := 0; i < create; i++ {
-				ch, cancelFunc, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType))
+				ch, cancelFunc, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType), false)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -312,13 +312,13 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 	barEventType := logical.EventType("kv/bar")
 	bus.Start()
 
-	ch1, cancel1, err := bus.Subscribe(ctx, namespace.RootNamespace, "kv/*")
+	ch1, cancel1, err := bus.Subscribe(ctx, namespace.RootNamespace, "kv/*", false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cancel1()
 
-	ch2, cancel2, err := bus.Subscribe(ctx, namespace.RootNamespace, "*/bar")
+	ch2, cancel2, err := bus.Subscribe(ctx, namespace.RootNamespace, "*/bar", false)
 	if err != nil {
 		t.Fatal(err)
 	}
