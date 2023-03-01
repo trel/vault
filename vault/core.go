@@ -3990,3 +3990,13 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
 }
+
+// GetMountTypeByAPIPath provide a quick way to get the plugin type from a mount table for an incoming request.
+func (c *Core) GetMountTypeByAPIPath(ctx context.Context, apiPath string) (string, string, bool) {
+	mountEntry, _, found := c.router.matchingMountEntryByPath(ctx, apiPath, true)
+	if !found || mountEntry == nil {
+		return "", "", false
+	}
+
+	return mountEntry.Type, mountEntry.Path, true
+}

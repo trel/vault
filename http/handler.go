@@ -225,7 +225,8 @@ func handler(props *vault.HandlerProperties) http.Handler {
 	helpWrappedHandler := wrapHelpHandler(mux, core)
 	corsWrappedHandler := wrapCORSHandler(helpWrappedHandler, core)
 	quotaWrappedHandler := rateLimitQuotaWrapping(corsWrappedHandler, core)
-	genericWrappedHandler := genericWrapping(core, quotaWrappedHandler, props)
+	ocspWrappedHandler := ocspGetWrappedHandler(quotaWrappedHandler, core)
+	genericWrappedHandler := genericWrapping(core, ocspWrappedHandler, props)
 
 	// Wrap the handler with PrintablePathCheckHandler to check for non-printable
 	// characters in the request path.
