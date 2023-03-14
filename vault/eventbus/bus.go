@@ -30,17 +30,19 @@ const (
 var (
 	ErrNotStarted              = errors.New("event broker has not been started")
 	cloudEventsFormatterFilter *cloudevents.FormatterFilter
+	slackFormatter             *slackFormatterNode
 	subscriptions              atomic.Int64 // keeps track of event subscription count in all event buses
 )
 
 // EventBus contains the main logic of running an event broker for Vault.
 // Start() must be called before the EventBus will accept events for sending.
 type EventBus struct {
-	logger          hclog.Logger
-	broker          *eventlogger.Broker
-	started         atomic.Bool
-	formatterNodeID eventlogger.NodeID
-	timeout         time.Duration
+	logger               hclog.Logger
+	broker               *eventlogger.Broker
+	started              atomic.Bool
+	formatterNodeID      eventlogger.NodeID
+	slackFormatterNodeID eventlogger.NodeID
+	timeout              time.Duration
 }
 
 type pluginEventBus struct {
@@ -140,6 +142,7 @@ func init() {
 			return true, nil
 		},
 	}
+	slackFormatter = newSlackFormatterNode()
 }
 
 func NewEventBus(logger hclog.Logger) (*EventBus, error) {
@@ -155,15 +158,27 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 		return nil, err
 	}
 
+	slackFormatterID, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+	slackFormatterNodeID := eventlogger.NodeID(slackFormatterID)
+	slackFormatter = newSlackFormatterNode()
+	err = broker.RegisterNode(slackFormatterNodeID, slackFormatter)
+	if err != nil {
+		return nil, err
+	}
+
 	if logger == nil {
 		logger = hclog.Default().Named("events")
 	}
 
 	return &EventBus{
-		logger:          logger,
-		broker:          broker,
-		formatterNodeID: formatterNodeID,
-		timeout:         defaultTimeout,
+		logger:               logger,
+		broker:               broker,
+		formatterNodeID:      formatterNodeID,
+		slackFormatterNodeID: slackFormatterNodeID,
+		timeout:              defaultTimeout,
 	}, nil
 }
 
