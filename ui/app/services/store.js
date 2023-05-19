@@ -153,6 +153,8 @@ export default Store.extend({
   fetchPage(modelName, query) {
     const response = this.constructResponse(modelName, query);
     this.peekAll(modelName).forEach((record) => {
+      // This is a bandaid for `record is undefined` error when going to policies page, away, then back again
+      if (!record) return;
       record.unloadRecord();
     });
     return new Promise((resolve) => {
