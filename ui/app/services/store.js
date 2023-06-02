@@ -8,7 +8,7 @@ import { schedule } from '@ember/runloop';
 import { copy } from 'ember-copy';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
-import { assert } from '@ember/debug';
+import { assert, debug } from '@ember/debug';
 import { set, get, computed } from '@ember/object';
 import clamp from 'vault/utils/clamp';
 import config from 'vault/config/environment';
@@ -203,5 +203,23 @@ export default Store.extend({
 
   clearAllDatasets() {
     this.clearDataset();
+  },
+
+  unloadRecord(record) {
+    if (!this.isDestroyed && !this.isDestroying) {
+      // Prevent unload attempt after test teardown, resulting in test failure
+      this._super(...arguments);
+    } else {
+      debug('skipped unload record', record, record.id, record.itemType);
+    }
+  },
+
+  unloadAll(type) {
+    if (!this.isDestroyed && !this.isDestroying) {
+      // Prevent unload attempt after test teardown, resulting in test failure
+      this._super(...arguments);
+    } else {
+      debug(`skipped unload model of type ${type} because store is destroyed`);
+    }
   },
 });
