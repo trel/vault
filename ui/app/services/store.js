@@ -4,7 +4,6 @@
  */
 
 import Store from '@ember-data/store';
-import { schedule } from '@ember/runloop';
 import { copy } from 'ember-copy';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
@@ -152,26 +151,20 @@ export default Store.extend({
   // pushes records into the store and returns the result
   fetchPage(modelName, query) {
     const response = this.constructResponse(modelName, query);
-    this.peekAll(modelName).forEach((record) => {
-      // This is a bandaid for `record is undefined` error when going to policies page, away, then back again
-      if (!record) return;
-      record.unloadRecord();
-    });
+    this.unloadAll(modelName);
     return new Promise((resolve) => {
-      schedule('destroy', () => {
-        this.push(
-          this.serializerFor(modelName).normalizeResponse(
-            this,
-            this.modelFor(modelName),
-            response,
-            null,
-            'query'
-          )
-        );
-        const model = this.peekAll(modelName).toArray();
-        model.set('meta', response.meta);
-        resolve(model);
-      });
+      this.push(
+        this.serializerFor(modelName).normalizeResponse(
+          this,
+          this.modelFor(modelName),
+          response,
+          null,
+          'query'
+        )
+      );
+      const model = this.peekAll(modelName).toArray();
+      model.set('meta', response.meta);
+      resolve(model);
     });
   },
 
