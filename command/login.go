@@ -225,6 +225,7 @@ func (c *LoginCommand) Run(args []string) int {
 	}
 
 	// Authenticate delegation to the auth handler
+	c.UI.Info("Authenticating to Vault...")
 	secret, err := authHandler.Auth(client, config)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error authenticating: %s", err))
