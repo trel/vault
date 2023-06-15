@@ -104,6 +104,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		err = c.UnauthenticatedBind(userBindDN)
 	}
 	if err != nil {
+		// TODO: LT This is the correct error should be getting
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("ldap bind failed", "error", err)
 		}

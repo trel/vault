@@ -13,11 +13,13 @@ type CLIHandler struct{}
 
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
 	mount, ok := m["mount"]
+	fmt.Printf("mount: %v\n", mount)
 	if !ok {
 		mount = "ldap"
 	}
 
 	username, ok := m["username"]
+	fmt.Printf("username: %v\n", username)
 	if !ok {
 		username = usernameFromEnv()
 		if username == "" {
@@ -25,6 +27,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		}
 	}
 	password, ok := m["password"]
+	fmt.Printf("password: %v\n", password)
 	if !ok {
 		fmt.Fprintf(os.Stderr, "Password (will be hidden): ")
 		var err error
@@ -38,13 +41,17 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	data := map[string]interface{}{
 		"password": password,
 	}
+	fmt.Println("data: ", data)
 
 	path := fmt.Sprintf("auth/%s/login/%s", mount, username)
+	fmt.Println("path: ", path)
 	secret, err := c.Logical().Write(path, data)
+	fmt.Printf("secret: %v\n", secret)
 	if err != nil {
 		return nil, err
 	}
 	if secret == nil {
+		// TODO: LT This is where we are ending up
 		return nil, fmt.Errorf("empty response from credential provider")
 	}
 
