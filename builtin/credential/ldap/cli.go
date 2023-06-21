@@ -47,6 +47,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	fmt.Println("LT - G: path: ", path)
 	secret, err := c.Logical().Write(path, data)
 	fmt.Printf("LT - G: secret: %v\n", secret)
+	fmt.Printf("LT - G: err: %v\n", err)
 	if err != nil {
 		return nil, err
 	}
