@@ -16,13 +16,13 @@ type CLIHandler struct{}
 
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
 	mount, ok := m["mount"]
-	fmt.Printf("mount: %v\n", mount)
+	fmt.Printf("LT - B: mount: %v\n", mount)
 	if !ok {
 		mount = "ldap"
 	}
 
 	username, ok := m["username"]
-	fmt.Printf("username: %v\n", username)
+	fmt.Printf("LT - B: username: %v\n", username)
 	if !ok {
 		username = usernameFromEnv()
 		if username == "" {
@@ -46,12 +46,12 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	data := map[string]interface{}{
 		"password": password,
 	}
-	fmt.Println("data: ", data)
+	fmt.Println("LT - B: data: ", data)
 
 	path := fmt.Sprintf("auth/%s/login/%s", mount, username)
-	fmt.Println("path: ", path)
+	fmt.Println("LT - B: path: ", path)
 	secret, err := c.Logical().Write(path, data)
-	fmt.Printf("secret: %v\n", secret)
+	fmt.Printf("LT - B: secret: %v\n", secret)
 	if err != nil {
 		return nil, err
 	}
