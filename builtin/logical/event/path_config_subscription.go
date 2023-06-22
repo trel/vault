@@ -14,9 +14,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var (
-	respErrEmptyName = "empty name attribute given"
-)
+const respErrEmptyName = "empty name attribute given"
 
 // SubscriptionConfig is used by the Factory function to configure a Subscription
 // object.
