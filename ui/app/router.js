@@ -53,6 +53,7 @@ Router.map(function () {
         this.route('tool', { path: '/:selected_action' });
       });
       this.route('access', function () {
+        this.route('reset-password');
         this.route('methods', { path: '/' });
         this.route('method', { path: '/:path' }, function () {
           this.route('index', { path: '/' });
@@ -61,7 +62,6 @@ Router.map(function () {
             this.route('create');
             this.route('edit', { path: '/edit/:item_id' });
             this.route('show', { path: '/show/:item_id' });
-            this.route('reset-password', { path: '/reset-password/:item_id' });
           });
           this.route('section', { path: '/:section_name' });
         });

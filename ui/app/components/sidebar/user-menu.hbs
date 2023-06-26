@@ -34,6 +34,13 @@
                   </LinkTo>
                 </li>
               {{/if}}
+              {{#if this.isUserpass}}
+                <li class="action">
+                  <LinkTo @route="vault.cluster.access.reset-password" data-test-user-menu-item="reset-password">
+                    Reset password
+                  </LinkTo>
+                </li>
+              {{/if}}
               <li class="action">
                 <CopyButton
                   @clipboardText={{this.auth.currentToken}}
