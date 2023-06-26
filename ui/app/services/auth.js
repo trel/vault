@@ -5,7 +5,6 @@
 
 import Ember from 'ember';
 import { resolve, reject } from 'rsvp';
-import { assign } from '@ember/polyfills';
 import { isArray } from '@ember/array';
 import { computed, get } from '@ember/object';
 import { capitalize } from '@ember/string';
@@ -117,10 +116,7 @@ export default Service.extend({
     }
     const backend = this.backendFromTokenName(token);
     const stored = this.getTokenData(token);
-
-    return assign(stored, {
-      backend: BACKENDS.findBy('type', backend),
-    });
+    return { ...stored, backend: { ...stored.backend, ...BACKENDS.findBy('type', backend) } };
   }),
 
   init() {
@@ -183,7 +179,7 @@ export default Service.extend({
     if (namespace) {
       defaults.headers['X-Vault-Namespace'] = namespace;
     }
-    const opts = assign(defaults, options);
+    const opts = { ...defaults, ...options };
 
     return fetch(url, {
       method: opts.method || 'GET',
@@ -222,30 +218,7 @@ export default Service.extend({
     };
   },
 
-  persistAuthData() {
-    const [firstArg, resp] = arguments;
-    const tokens = this.tokens;
-    const currentNamespace = this.namespaceService.path || '';
-    let tokenName;
-    let options;
-    let backend;
-    if (typeof firstArg === 'string') {
-      tokenName = firstArg;
-      backend = this.backendFromTokenName(tokenName);
-    } else {
-      options = firstArg;
-      backend = options.backend;
-    }
-
-    const currentBackend = BACKENDS.findBy('type', backend);
-    let displayName;
-    if (isArray(currentBackend.displayNamePath)) {
-      displayName = currentBackend.displayNamePath.map((name) => get(resp, name)).join('/');
-    } else {
-      displayName = get(resp, currentBackend.displayNamePath);
-    }
-
-    const { entity_id, policies, renewable, namespace_path } = resp;
+  calculateRootNamespace(currentNamespace, namespace_path, backend) {
     // here we prefer namespace_path if its defined,
     // else we look and see if there's already a namespace saved
     // and then finally we'll use the current query param if the others
@@ -265,7 +238,38 @@ export default Service.extend({
     if (typeof userRootNamespace === 'undefined') {
       userRootNamespace = currentNamespace;
     }
-    const data = {
+  },
+
+  persistAuthData() {
+    const [firstArg, resp] = arguments;
+    const mountPath = firstArg?.data?.path;
+    const tokens = this.tokens;
+    const currentNamespace = this.namespaceService.path || '';
+    let tokenName;
+    let options;
+    let backend;
+    if (typeof firstArg === 'string') {
+      tokenName = firstArg;
+      backend = this.backendFromTokenName(tokenName);
+    } else {
+      options = firstArg;
+      backend = options.backend;
+    }
+
+    const currentBackend = {
+      mountPath,
+      ...BACKENDS.findBy('type', backend),
+    };
+    let displayName;
+    if (isArray(currentBackend.displayNamePath)) {
+      displayName = currentBackend.displayNamePath.map((name) => get(resp, name)).join('/');
+    } else {
+      displayName = get(resp, currentBackend.displayNamePath);
+    }
+
+    const { entity_id, policies, renewable, namespace_path } = resp;
+    const userRootNamespace = this.calculateRootNamespace(currentNamespace, namespace_path, backend);
+    let data = {
       userRootNamespace,
       displayName,
       backend: currentBackend,
@@ -284,7 +288,10 @@ export default Service.extend({
     );
 
     if (resp.renewable) {
-      assign(data, this.calculateExpiration(resp));
+      data = {
+        ...data,
+        ...this.calculateExpiration(resp),
+      };
     }
 
     if (!data.displayName) {
