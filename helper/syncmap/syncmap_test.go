@@ -68,7 +68,7 @@ func TestSyncMap_Values(t *testing.T) {
 	assert.Equal(t, []stringID{{"b", "b"}}, m.Values())
 	m.Put("c", stringID{"d", "d"})
 	values := m.Values()
-	sort.Slice(values, func(i, j int) bool {
+	sort.SliceStable(values, func(i, j int) bool {
 		return values[i].val < values[j].val
 	})
 	assert.Equal(t, []stringID{{"b", "b"}, {"d", "d"}}, m.Values())
