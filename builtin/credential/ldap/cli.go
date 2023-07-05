@@ -12,7 +12,7 @@ import (
 type CLIHandler struct{}
 
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
-	fmt.Printf("LT - B: In Auth")
+	fmt.Printf("LT - G: In Auth\n")
 	mount, ok := m["mount"]
 	fmt.Printf("LT - G: mount: %v\n", mount)
 	if !ok {
