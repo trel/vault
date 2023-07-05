@@ -57,6 +57,7 @@ type backend struct {
 }
 
 func (b *backend) Login(ctx context.Context, req *logical.Request, username string, password string, usernameAsAlias bool) (string, []string, *logical.Response, []string, error) {
+	fmt.Printf("LT - B: In Login")
 	cfg, err := b.Config(ctx, req)
 	if err != nil {
 		return "", nil, nil, nil, err
